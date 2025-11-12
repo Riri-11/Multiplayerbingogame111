@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elegant Bingo Party</title>
+    
+    <!-- Tailwind CSS for Layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Confetti Library for the Winner Celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts for that 'Elegant' look -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;800&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            /* A beautiful, elegant gradient background */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+        }
+
+        /* Glassmorphism Effect (Frosted Glass) */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        /* Pop Animation for the numbers */
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* Smooth Transitions */
+        .number-cell { transition: all 0.3s ease; }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center py-8 text-white">
+
+    <!-- HEADER -->
+    <header class="text-center mb-8 animate-pop">
+        <h1 class="text-5xl font-extrabold tracking-tight drop-shadow-md">
+            <i class="fa-solid fa-star text-yellow-300 mr-2"></i> Bingo Royale
+        </h1>
+        <p class="text-purple-100 text-lg mt-2 font-light tracking-wider">Multiplayer Simulation</p>
+    </header>
+
+    <!-- CONTROL CENTER (The Host) -->
+    <div class="glass-panel rounded-3xl p-8 w-11/12 max-w-2xl flex flex-col md:flex-row items-center justify-between mb-10 gap-6">
+        
+        <!-- Left: The Big Number -->
+        <div class="text-center w-full md:w-1/3">
+            <div class="text-xs uppercase tracking-widest text-purple-100 mb-1">Current Ball</div>
+            <div id="current-number" class="text-7xl font-black text-white drop-shadow-lg h-24 flex items-center justify-center">
+                --
+            </div>
+        </div>
+
+        <!-- Middle: The Button & Info -->
+        <div class="text-center w-full md:w-1/3 flex flex-col gap-3">
+            <button onclick="drawNumber()" id="draw-btn" 
+                class="bg-white text-purple-700 hover:bg-purple-50 font-extrabold py-3 px-8 rounded-full shadow-lg transform transition hover:-translate-y-1 active:scale-95 text-lg w-full">
+                DRAW BALL
+            </button>
+            <div class="text-sm text-purple-200 font-medium">
+                <span id="count-display">0</span> / 75 Drawn
+            </div>
+        </div>
+
+        <!-- Right: History -->
+        <div class="w-full md:w-1/3 bg-black/20 rounded-xl p-3">
+            <div class="text-xs uppercase text-purple-200 mb-2 text-center">Recent Numbers</div>
+            <div id="history-list" class="flex justify-center gap-2 text-sm font-bold h-8">
+                <!-- Last 5 numbers appear here -->
+                <span class="opacity-50">...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME STATUS MESSAGE -->
+    <div id="status-bar" class="h-8 mb-6 text-xl font-bold text-yellow-300 drop-shadow-md"></div>
+
+    <!-- PLAYERS GRID (Now with 4 Players!) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-11/12 max-w-7xl px-2">
+
+        <!-- Player 1 -->
+        <div class="glass-panel rounded-2xl p-4 relative group hover:bg-white/30 transition">
+            <div class="flex justify-between items-center mb-3">
+                <span class="font-bold text-lg">Player 1</span>
+                <i class="fa-solid fa-user text-white/70"></i>
+            </div>
+            <div id="p1-board" class="grid grid-cols-5 gap-2"></div>
+            <!-- Win Badge -->
+            <div id="p1-win" class="hidden absolute inset-0 bg-green-500/90 rounded-2xl flex flex-col items-center justify-center z-10 backdrop-blur-sm">
+                <i class="fa-solid fa-trophy text-5xl text-yellow-300 mb-2"></i>
+                <span class="text-2xl font-bold">WINNER!</span>
+            </div>
+        </div>
+
+        <!-- Player 2 -->
+        <div class="glass-panel rounded-2xl p-4 relative group hover:bg-white/30 transition">
+            <div class="flex justify-between items-center mb-3">
+                <span class="font-bold text-lg">Player 2</span>
+                <i class="fa-solid fa-user text-white/70"></i>
+            </div>
+            <div id="p2-board" class="grid grid-cols-5 gap-2"></div>
+            <div id="p2-win" class="hidden absolute inset-0 bg-green-500/90 rounded-2xl flex flex-col items-center justify-center z-10 backdrop-blur-sm">
+                <i class="fa-solid fa-trophy text-5xl text-yellow-300 mb-2"></i>
+                <span class="text-2xl font-bold">WINNER!</span>
+            </div>
+        </div>
+
+        <!-- Player 3 -->
+        <div class="glass-panel rounded-2xl p-4 relative group hover:bg-white/30 transition">
+            <div class="flex justify-between items-center mb-3">
+                <span class="font-bold text-lg">Player 3</span>
+                <i class="fa-solid fa-user text-white/70"></i>
+            </div>
+            <div id="p3-board" class="grid grid-cols-5 gap-2"></div>
+            <div id="p3-win" class="hidden absolute inset-0 bg-green-500/90 rounded-2xl flex flex-col items-center justify-center z-10 backdrop-blur-sm">
+                <i class="fa-solid fa-trophy text-5xl text-yellow-300 mb-2"></i>
+                <span class="text-2xl font-bold">WINNER!</span>
+            </div>
+        </div>
+
+        <!-- Player 4 -->
+        <div class="glass-panel rounded-2xl p-4 relative group hover:bg-white/30 transition">
+            <div class="flex justify-between items-center mb-3">
+                <span class="font-bold text-lg">Player 4</span>
+                <i class="fa-solid fa-user text-white/70"></i>
+            </div>
+            <div id="p4-board" class="grid grid-cols-5 gap-2"></div>
+            <div id="p4-win" class="hidden absolute inset-0 bg-green-500/90 rounded-2xl flex flex-col items-center justify-center z-10 backdrop-blur-sm">
+                <i class="fa-solid fa-trophy text-5xl text-yellow-300 mb-2"></i>
+                <span class="text-2xl font-bold">WINNER!</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        const maxNumber = 75;
+        let drawnNumbers = [];
+        let isGameOver = false;
+
+        // SETUP 4 PLAYERS
+        const players = [
+            { id: 'p1', numbers: [] },
+            { id: 'p2', numbers: [] },
+            { id: 'p3', numbers: [] },
+            { id: 'p4', numbers: [] }
+        ];
+
+        function initGame() {
+            players.forEach(player => {
+                player.numbers = generateBoardNumbers();
+                renderBoard(player);
+            });
+        }
+
+        // Generate 25 unique numbers (1-75)
+        function generateBoardNumbers() {
+            let nums = new Set();
+            while(nums.size < 25) {
+                nums.add(Math.floor(Math.random() * maxNumber) + 1);
+            }
+            return Array.from(nums);
+        }
+
+        // Render HTML for a player
+        function renderBoard(player) {
+            const board = document.getElementById(player.id + '-board');
+            board.innerHTML = '';
+
+            player.numbers.forEach((num, index) => {
+                const cell = document.createElement('div');
+                
+                // Elegant Style for Cells
+                cell.className = 'number-cell h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-full bg-white/20 text-white text-xs md:text-sm font-medium shadow-inner';
+
+                if (index === 12) { // Center is FREE
+                    cell.innerHTML = '<i class="fa-solid fa-star text-yellow-300"></i>';
+                    cell.classList.add('bg-purple-900/50', 'border', 'border-yellow-400/50');
+                    cell.id = `${player.id}-cell-FREE`;
+                } else {
+                    cell.innerText = num;
+                    cell.id = `${player.id}-cell-${num}`;
+                }
+                board.appendChild(cell);
+            });
+        }
+
+        // DRAW BUTTON LOGIC
+        function drawNumber() {
+            if (isGameOver) return;
+
+            if (drawnNumbers.length >= maxNumber) {
+                document.getElementById('status-bar').innerText = "All numbers drawn!";
+                return;
+            }
+
+            // 1. Pick Unique Random Number
+            let newNum;
+            do {
+                newNum = Math.floor(Math.random() * maxNumber) + 1;
+            } while (drawnNumbers.includes(newNum));
+
+            drawnNumbers.push(newNum);
+
+            // 2. Update Display
+            const display = document.getElementById('current-number');
+            display.innerText = newNum;
+            // Trigger Animation
+            display.classList.remove('animate-pop');
+            void display.offsetWidth; 
+            display.classList.add('animate-pop');
+
+            // 3. Update Stats
+            document.getElementById('count-display').innerText = drawnNumbers.length;
+            updateHistory(newNum);
+
+            // 4. Check Players (Interactive Logic)
+            checkPlayers(newNum);
+        }
+
+        function updateHistory(num) {
+            const history = document.getElementById('history-list');
+            // Show last 5 numbers
+            const recent = drawnNumbers.slice(-5).reverse(); 
+            history.innerHTML = recent.map(n => `<span class="bg-white/20 px-2 rounded-md">${n}</span>`).join('');
+        }
+
+        function checkPlayers(number) {
+            players.forEach(player => {
+                const cell = document.getElementById(`${player.id}-cell-${number}`);
+                if (cell) {
+                    // Elegant Mark Style (Gold/Green Gradient)
+                    cell.className = 'number-cell h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 text-white font-bold shadow-lg transform scale-110';
+                    checkForWin(player);
+                }
+            });
+        }
+
+        function checkForWin(player) {
+            // Winning Indices
+            const wins = [
+                [0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14], [15,16,17,18,19], [20,21,22,23,24], // Horizontal
+                [0,5,10,15,20], [1,6,11,16,21], [2,7,12,17,22], [3,8,13,18,23], [4,9,14,19,24], // Vertical
+                [0,6,12,18,24], [4,8,12,16,20] // Diagonal
+            ];
+
+            const hasBingo = wins.some(line => {
+                return line.every(index => {
+                    if (index === 12) return true;
+                    return drawnNumbers.includes(player.numbers[index]);
+                });
+            });
+
+            if (hasBingo) {
+                triggerWin(player);
+            }
+        }
+
+        function triggerWin(player) {
+            isGameOver = true;
+            document.getElementById('status-bar').innerText = `BINGO! Player ${player.id.replace('p','')} Wins!`;
+            
+            // Show Winner Badge
+            document.getElementById(`${player.id}-win`).classList.remove('hidden');
+
+            // Disable Button
+            const btn = document.getElementById('draw-btn');
+            btn.innerText = "GAME OVER";
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // CONFETTI EXPLOSION!
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                var particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        function randomInRange(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        // Start
+        initGame();
+    </script>
+</body>
+</html>
